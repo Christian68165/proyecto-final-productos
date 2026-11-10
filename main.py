@@ -4,6 +4,18 @@ from sqlalchemy.orm import Session
 from typing import List
 import models, schemas
 from database import engine, get_db
+import os
+import requests
+
+# Variable para Slack
+SLACK_WEBHOOK_URL = os.getenv("SLACK_WEBHOOK_URL")
+
+def notificar_slack(texto: str):
+    if SLACK_WEBHOOK_URL:
+        try:
+            requests.post(SLACK_WEBHOOK_URL, json={"text": texto}, timeout=3)
+        except Exception as e:
+            print("Error enviando a Slack:", e)
 
 # Crea las tablas si no existen (aunque ya las creamos en Supabase)
 models.Base.metadata.create_all(bind=engine)
@@ -76,4 +88,8 @@ def create_game(game: schemas.GameCreate, db: Session = Depends(get_db)):
     db.add(nuevo)
     db.commit()
     db.refresh(nuevo)
+    
+    # ---- NOTIFICACIÓN A SLACK ----
+    notificar_slack(f"🎮 Nuevo juego agregado: *{nuevo.title}* (${nuevo.price})")
+    
     return nuevo
