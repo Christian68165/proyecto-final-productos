@@ -86,36 +86,43 @@ def create_game(game: schemas.GameCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(nuevo)
     
-    notificar_slack(f"🎮 Nuevo juego agregado: *{nuevo.title}* (${nuevo.price})")
+    notificar_slack(f"🎮 Nuevo juego agregado: *{nuevo.title}* (Bs. {nuevo.price})")
     
     return nuevo
 
 # ==========================================
-# ENDPOINT DE VENTAS (CHECKOUT)
+# ENDPOINT DE VENTAS (CHECKOUT REAL)
 # ==========================================
-@app.post("/api/v1/checkout/{game_id}", response_model=schemas.SaleResponse, tags=["Ventas"])
-def procesar_compra(game_id: int, db: Session = Depends(get_db)):
+@app.post("/api/v1/checkout", response_model=schemas.SaleResponse, tags=["Ventas"])
+def procesar_compra(venta_data: schemas.SaleCreate, db: Session = Depends(get_db)):
     # 1. Buscar el juego
-    juego = db.query(models.Game).filter(models.Game.id == game_id).first()
+    juego = db.query(models.Game).filter(models.Game.id == venta_data.game_id).first()
     if not juego:
         raise HTTPException(status_code=404, detail="Juego no encontrado")
     
-    # 2. Validar Stock (Lógica de negocio real)
-    if juego.stock <= 0:
-        raise HTTPException(status_code=400, detail="No hay stock disponible de este juego")
+    # 2. Validar Stock
+    if juego.stock < venta_data.quantity:
+        raise HTTPException(status_code=400, detail=f"No hay suficiente stock. Solo quedan {juego.stock} unidades.")
     
-    # 3. Restar el stock
-    juego.stock -= 1
+    # 3. Restar el stock según la cantidad comprada
+    juego.stock -= venta_data.quantity
     db.commit()
     db.refresh(juego)
     
-    # 4. Registrar la venta
-    nueva_venta = models.Sale(game_id=juego.id, quantity=1, total=juego.price)
+    # 4. Calcular el total en Bolivianos
+    total_venta = juego.price * venta_data.quantity
+    
+    # 5. Registrar la venta
+    nueva_venta = models.Sale(
+        game_id=juego.id, 
+        quantity=venta_data.quantity, 
+        total=total_venta
+    )
     db.add(nueva_venta)
     db.commit()
     db.refresh(nueva_venta)
     
-    # 5. Notificar a Slack
-    notificar_slack(f"💰 ¡Nueva venta realizada! Juego: *{juego.title}* por ${juego.price}. Quedan {juego.stock} en stock.")
+    # 6. Notificar a Slack
+    notificar_slack(f"💰 ¡Nueva venta realizada! {venta_data.quantity}x *{juego.title}* por Bs. {total_venta:.2f}. Quedan {juego.stock} en stock.")
     
     return nueva_venta

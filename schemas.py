@@ -43,7 +43,7 @@ class GameResponse(GameBase):
     genre: Optional[GenreResponse] = None
     model_config = ConfigDict(from_attributes=True)
 
-# ---------- SALES (NUEVO) ----------
+# ---------- SALES (RECIBE CANTIDAD) ----------
 class SaleCreate(BaseModel):
     game_id: int
     quantity: int = 1
