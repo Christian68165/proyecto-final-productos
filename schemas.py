@@ -39,7 +39,18 @@ class GameCreate(GameBase):
 
 class GameResponse(GameBase):
     id: int
-    # Esto hace que al pedir un juego, devuelva también los datos de su plataforma y género (JOIN)
     platform: Optional[PlatformResponse] = None
     genre: Optional[GenreResponse] = None
+    model_config = ConfigDict(from_attributes=True)
+
+# ---------- SALES (NUEVO) ----------
+class SaleCreate(BaseModel):
+    game_id: int
+    quantity: int = 1
+
+class SaleResponse(BaseModel):
+    id: int
+    game_id: int
+    quantity: int
+    total: float
     model_config = ConfigDict(from_attributes=True)

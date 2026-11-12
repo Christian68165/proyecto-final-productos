@@ -33,3 +33,14 @@ class Game(Base):
 
     platform = relationship("Platform", back_populates="games")
     genre = relationship("Genre", back_populates="games")
+
+# --- NUEVA TABLA PARA VENTAS ---
+class Sale(Base):
+    __tablename__ = "sales"
+
+    id = Column(Integer, primary_key=True, index=True)
+    game_id = Column(Integer, ForeignKey("games.id"), nullable=False)
+    quantity = Column(Integer, nullable=False, default=1)
+    total = Column(Float, nullable=False)
+    
+    game = relationship("Game")
